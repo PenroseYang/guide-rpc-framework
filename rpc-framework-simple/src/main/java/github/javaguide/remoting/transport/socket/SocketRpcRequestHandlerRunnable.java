@@ -26,6 +26,14 @@ public class SocketRpcRequestHandlerRunnable implements Runnable {
         this.rpcRequestHandler = SingletonFactory.getInstance(RpcRequestHandler.class);
     }
 
+    /**
+     * 这是一个重写的run方法，用于处理来自客户端的请求。
+     * 通过线程的方式处理，提高了处理效率。
+     * 使用了try-with-resources语句，自动关闭资源，避免了资源泄露。
+     * 通过ObjectInputStream和ObjectOutputStream进行对象的序列化和反序列化，实现了对象的网络传输。
+     * 通过RpcRequestHandler处理请求，得到处理结果，并通过RpcResponse返回给客户端。
+     * 如果在处理过程中出现异常，会进行捕获，并打印异常信息。
+     */
     @Override
     public void run() {
         log.info("server handle message from client by thread: [{}]", Thread.currentThread().getName());
@@ -39,5 +47,6 @@ public class SocketRpcRequestHandlerRunnable implements Runnable {
             log.error("occur exception:", e);
         }
     }
+
 
 }

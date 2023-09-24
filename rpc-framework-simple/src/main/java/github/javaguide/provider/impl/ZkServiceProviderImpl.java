@@ -58,11 +58,18 @@ public class ZkServiceProviderImpl implements ServiceProvider {
         return service;
     }
 
+    /**
+     * publishService方法是用于发布服务的。它首先获取本地主机的IP地址，
+     * 然后将服务添加到服务提供者中，最后在服务注册中心注册服务，服务的地址是本地主机的IP地址和Netty服务器的端口。
+     *
+     * @param rpcServiceConfig rpc service related attributes
+     */
     @Override
     public void publishService(RpcServiceConfig rpcServiceConfig) {
         try {
             String host = InetAddress.getLocalHost().getHostAddress();
             this.addService(rpcServiceConfig);
+            // server端把自己的服务注册到zookeeper上，key是自己的全限定名，value是ip+端口，这里的ip是读取本地ip来实现的，端口直接写死
             serviceRegistry.registerService(rpcServiceConfig.getRpcServiceName(), new InetSocketAddress(host, NettyRpcServer.PORT));
         } catch (UnknownHostException e) {
             log.error("occur exception when getHostAddress", e);

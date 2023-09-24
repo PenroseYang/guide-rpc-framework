@@ -29,7 +29,9 @@ public class SocketRpcServer {
 
 
     public SocketRpcServer() {
+        // 创建了一个线程池
         threadPool = ThreadPoolFactoryUtil.createCustomThreadPoolIfAbsent("socket-server-rpc-pool");
+        // 这个zookeeper好粗糙，直接就是指定了这个类，里面 construction 直接给new出来了
         serviceProvider = SingletonFactory.getInstance(ZkServiceProviderImpl.class);
     }
 
@@ -39,12 +41,22 @@ public class SocketRpcServer {
 
     public void start() {
         try (ServerSocket server = new ServerSocket()) {
+            /**
+             * 监听的端口就是服务端注册到zookeeper上的端口
+             */
             String host = InetAddress.getLocalHost().getHostAddress();
             server.bind(new InetSocketAddress(host, PORT));
             CustomShutdownHook.getCustomShutdownHook().clearAll();
             Socket socket;
+            /**
+             *  监听客户端连接并处理请求，server.accept是一个阻塞方法，会一直等待客户端连接
+             */
             while ((socket = server.accept()) != null) {
                 log.info("client connected [{}]", socket.getInetAddress());
+                /**
+                 * SocketRpcRequestHandlerRunnable 这个才是重点！
+                 * 这里要等到client端调用到这里的时候断点进去看，服务端内部一个线程池，当然也有netty接收的办法
+                 */
                 threadPool.execute(new SocketRpcRequestHandlerRunnable(socket));
             }
             threadPool.shutdown();

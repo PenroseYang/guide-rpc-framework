@@ -31,40 +31,36 @@ public class RpcClientProxy implements InvocationHandler {
 
     private static final String INTERFACE_NAME = "interfaceName";
 
-    /**
-     * Used to send requests to the server.And there are two implementations: socket and netty
-     */
+    // 用于向服务器发送请求，有两种实现方式：socket和netty
     private final RpcRequestTransport rpcRequestTransport;
     private final RpcServiceConfig rpcServiceConfig;
 
+    // 构造函数，初始化rpcRequestTransport和rpcServiceConfig
     public RpcClientProxy(RpcRequestTransport rpcRequestTransport, RpcServiceConfig rpcServiceConfig) {
         this.rpcRequestTransport = rpcRequestTransport;
         this.rpcServiceConfig = rpcServiceConfig;
     }
 
-
+    // 构造函数，只初始化rpcRequestTransport，rpcServiceConfig使用默认配置
     public RpcClientProxy(RpcRequestTransport rpcRequestTransport) {
         this.rpcRequestTransport = rpcRequestTransport;
         this.rpcServiceConfig = new RpcServiceConfig();
     }
 
-    /**
-     * get the proxy object
-     */
+    // 获取代理对象
     @SuppressWarnings("unchecked")
     public <T> T getProxy(Class<T> clazz) {
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, this);
     }
 
-    /**
-     * This method is actually called when you use a proxy object to call a method.
-     * The proxy object is the object you get through the getProxy method.
-     */
+    // 当使用代理对象调用方法时，实际上调用的是这个方法
+    // 代理对象是通过getProxy方法获取的对象
     @SneakyThrows
     @SuppressWarnings("unchecked")
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) {
         log.info("invoked method: [{}]", method.getName());
+        // 构建RpcRequest对象
         RpcRequest rpcRequest = RpcRequest.builder().methodName(method.getName())
                 .parameters(args)
                 .interfaceName(method.getDeclaringClass().getName())
@@ -74,17 +70,30 @@ public class RpcClientProxy implements InvocationHandler {
                 .version(rpcServiceConfig.getVersion())
                 .build();
         RpcResponse<Object> rpcResponse = null;
+
+        /**
+         * todo 这里是不是少了一个连接池？传输层的连接池？
+         * 可能要看一下netty这里的知识才行
+         */
+
+        // 如果rpcRequestTransport是NettyRpcClient类型，使用CompletableFuture异步获取结果
         if (rpcRequestTransport instanceof NettyRpcClient) {
             CompletableFuture<RpcResponse<Object>> completableFuture = (CompletableFuture<RpcResponse<Object>>) rpcRequestTransport.sendRpcRequest(rpcRequest);
             rpcResponse = completableFuture.get();
         }
+
+        // 如果rpcRequestTransport是SocketRpcClient类型，直接获取结果
         if (rpcRequestTransport instanceof SocketRpcClient) {
             rpcResponse = (RpcResponse<Object>) rpcRequestTransport.sendRpcRequest(rpcRequest);
         }
+
+        // 检查响应结果
         this.check(rpcResponse, rpcRequest);
+        // 返回响应数据
         return rpcResponse.getData();
     }
 
+    // 检查响应结果，如果响应结果为空，或者请求id和响应id不匹配，或者响应状态码不是成功，都抛出异常
     private void check(RpcResponse<Object> rpcResponse, RpcRequest rpcRequest) {
         if (rpcResponse == null) {
             throw new RpcException(RpcErrorMessageEnum.SERVICE_INVOCATION_FAILURE, INTERFACE_NAME + ":" + rpcRequest.getInterfaceName());

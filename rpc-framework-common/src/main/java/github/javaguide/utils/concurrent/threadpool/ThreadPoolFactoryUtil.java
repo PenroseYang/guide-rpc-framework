@@ -4,14 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * 创建 ThreadPool(线程池) 的工具类.
@@ -42,6 +35,15 @@ public final class ThreadPoolFactoryUtil {
         return createCustomThreadPoolIfAbsent(customThreadPoolConfig, threadNamePrefix, false);
     }
 
+    /**
+     *  创建自定义线程池（如果不存在）
+     *  这里面基本啥逻辑没有，这里也不是重点关注的地方，就当直接new线程池了
+     *
+     * @param customThreadPoolConfig
+     * @param threadNamePrefix
+     * @param daemon
+     * @return
+     */
     public static ExecutorService createCustomThreadPoolIfAbsent(CustomThreadPoolConfig customThreadPoolConfig, String threadNamePrefix, Boolean daemon) {
         ExecutorService threadPool = THREAD_POOLS.computeIfAbsent(threadNamePrefix, k -> createThreadPool(customThreadPoolConfig, threadNamePrefix, daemon));
         // 如果 threadPool 被 shutdown 的话就重新创建一个

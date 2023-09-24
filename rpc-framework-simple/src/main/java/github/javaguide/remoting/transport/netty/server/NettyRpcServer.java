@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class NettyRpcServer {
 
-    public static final int PORT = 9998;
+    public static final int PORT = 9997;
 
     private final ServiceProvider serviceProvider = SingletonFactory.getInstance(ZkServiceProviderImpl.class);
 
