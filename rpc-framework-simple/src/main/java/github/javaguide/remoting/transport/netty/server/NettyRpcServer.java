@@ -48,6 +48,9 @@ public class NettyRpcServer {
         serviceProvider.publishService(rpcServiceConfig);
     }
 
+    /**
+     * 这里是Netty和Socket不同的地方，基本上全是调用Netty的API
+     */
     @SneakyThrows
     public void start() {
         CustomShutdownHook.getCustomShutdownHook().clearAll();

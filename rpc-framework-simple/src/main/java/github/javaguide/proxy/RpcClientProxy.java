@@ -78,7 +78,12 @@ public class RpcClientProxy implements InvocationHandler {
 
         // 如果rpcRequestTransport是NettyRpcClient类型，使用CompletableFuture异步获取结果
         if (rpcRequestTransport instanceof NettyRpcClient) {
-            CompletableFuture<RpcResponse<Object>> completableFuture = (CompletableFuture<RpcResponse<Object>>) rpcRequestTransport.sendRpcRequest(rpcRequest);
+            /**
+             * 这里就涉及到netty的知识了
+             * 送过去的request里面，只要标明白了，interface、method、args就行了，别的都很好说
+             */
+            CompletableFuture<RpcResponse<Object>> completableFuture = (CompletableFuture<RpcResponse<Object>>)
+                    rpcRequestTransport.sendRpcRequest(rpcRequest);
             rpcResponse = completableFuture.get();
         }
 

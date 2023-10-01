@@ -34,7 +34,12 @@ public final class ExtensionLoader<T> {
     // 缓存类
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
-    // 私有构造函数，初始化类型
+    /**
+     * 私有构造函数，初始化类型，这个函数是私有的，只允许下面的getExtensionLoader方法调用上来
+     * ExtensionLoader这个类，一个类对应一个 extensions 配置文件，相当于给每一个文件做了一个缓存
+     *
+     * @param type
+     */
     private ExtensionLoader(Class<?> type) {
         this.type = type;
     }
@@ -56,19 +61,29 @@ public final class ExtensionLoader<T> {
         // 先从缓存中获取，如果没有则创建一个
         ExtensionLoader<S> extensionLoader = (ExtensionLoader<S>) EXTENSION_LOADERS.get(type);
         if (extensionLoader == null) {
+            // new了一个新的 ExtensionLoader 对象出来，对应于一个 extensions 文件
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<S>(type));
             extensionLoader = (ExtensionLoader<S>) EXTENSION_LOADERS.get(type);
         }
         return extensionLoader;
     }
 
-    // 获取扩展
+    /**
+     * 获取扩展
+     * 走到这个方法的时候，ExtensionLoader已经建好了，确定走某一个SPI文件了
+     *
+     * @param name
+     * @return
+     */
     public T getExtension(String name) {
         // 名称不能为空
         if (StringUtil.isBlank(name)) {
             throw new IllegalArgumentException("Extension name should not be null or empty.");
         }
-        // 先从缓存中获取，如果没有则创建一个
+        /**
+         * 先从缓存中获取，如果没有则创建一个
+         * 这个holder对象就是用来做双重单例锁的
+         */
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
             cachedInstances.putIfAbsent(name, new Holder<>());
@@ -80,6 +95,9 @@ public final class ExtensionLoader<T> {
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
+                    /**
+                     * 实际开始构建对象
+                     */
                     instance = createExtension(name);
                     holder.set(instance);
                 }
@@ -104,6 +122,9 @@ public final class ExtensionLoader<T> {
         T instance = (T) EXTENSION_INSTANCES.get(clazz);
         if (instance == null) {
             try {
+                /**
+                 * 每个Extension对应于一个文件，这个文件里面对应了好几个class，每个class是一个单例
+                 */
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             } catch (Exception e) {
@@ -113,7 +134,12 @@ public final class ExtensionLoader<T> {
         return instance;
     }
 
-    // 获取扩展类
+    /**
+     * 获取扩展类
+     * 这里就是从文件里面读取出扩展类的信息，并将其加载到Map里
+     *
+     * @return
+     */
     private Map<String, Class<?>> getExtensionClasses() {
         // 从缓存中获取已加载的扩展类
         Map<String, Class<?>> classes = cachedClasses.get();
@@ -123,6 +149,7 @@ public final class ExtensionLoader<T> {
                 classes = cachedClasses.get();
                 if (classes == null) {
                     classes = new HashMap<>();
+
                     // 从我们的扩展目录中加载所有扩展
                     loadDirectory(classes);
                     cachedClasses.set(classes);

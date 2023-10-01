@@ -31,28 +31,33 @@ public class SpringBeanPostProcessor implements BeanPostProcessor {
     private final ServiceProvider serviceProvider;
     private final RpcRequestTransport rpcClient;
 
+    // 构造函数，初始化serviceProvider和rpcClient
     public SpringBeanPostProcessor() {
         this.serviceProvider = SingletonFactory.getInstance(ZkServiceProviderImpl.class);
-        this.rpcClient = ExtensionLoader.getExtensionLoader(RpcRequestTransport.class).getExtension(RpcRequestTransportEnum.NETTY.getName());
+        this.rpcClient = ExtensionLoader.getExtensionLoader(RpcRequestTransport.class)
+                .getExtension(RpcRequestTransportEnum.NETTY.getName());
     }
 
+    // 在Bean初始化之前进行处理，如果Bean类上有RpcService注解，则进行服务发布
     @SneakyThrows
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         if (bean.getClass().isAnnotationPresent(RpcService.class)) {
             log.info("[{}] is annotated with  [{}]", bean.getClass().getName(), RpcService.class.getCanonicalName());
-            // get RpcService annotation
+            // 获取RpcService注解
             RpcService rpcService = bean.getClass().getAnnotation(RpcService.class);
-            // build RpcServiceProperties
+            // 构建RpcServiceProperties
             RpcServiceConfig rpcServiceConfig = RpcServiceConfig.builder()
                     .group(rpcService.group())
                     .version(rpcService.version())
                     .service(bean).build();
+            // 发布服务
             serviceProvider.publishService(rpcServiceConfig);
         }
         return bean;
     }
 
+    // 在Bean初始化之后进行处理，如果Bean类的字段上有RpcReference注解，则进行服务引用
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = bean.getClass();
@@ -63,17 +68,24 @@ public class SpringBeanPostProcessor implements BeanPostProcessor {
                 RpcServiceConfig rpcServiceConfig = RpcServiceConfig.builder()
                         .group(rpcReference.group())
                         .version(rpcReference.version()).build();
+                // 创建RpcClientProxy
                 RpcClientProxy rpcClientProxy = new RpcClientProxy(rpcClient, rpcServiceConfig);
+                // 获取代理对象
                 Object clientProxy = rpcClientProxy.getProxy(declaredField.getType());
                 declaredField.setAccessible(true);
                 try {
+                    /**
+                     * 将代理对象设置到字段上
+                     * 这里搞得比较简单，因为都在一个工程里面，省略了自己构建beanConfig那一步操作
+                     * 平时写工程的时候，beanConfig也是单独一个类或者一个xml，搞的也是生成代理类的事情
+                     */
                     declaredField.set(bean, clientProxy);
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                 }
             }
-
         }
         return bean;
     }
 }
+

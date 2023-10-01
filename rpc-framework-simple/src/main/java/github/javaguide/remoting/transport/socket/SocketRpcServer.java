@@ -20,6 +20,8 @@ import static github.javaguide.remoting.transport.netty.server.NettyRpcServer.PO
 /**
  * @author shuang.kou
  * @createTime 2020年05月10日 08:01:00
+ * server端服务对接两个外部系统，一个是client端，一个是zookeeper注册中心
+ * 所以这个类里面的方法(动作)，也都是跟着两端交互用的
  */
 @Slf4j
 public class SocketRpcServer {
@@ -27,9 +29,11 @@ public class SocketRpcServer {
     private final ExecutorService threadPool;
     private final ServiceProvider serviceProvider;
 
-
     public SocketRpcServer() {
-        // 创建了一个线程池
+        /**
+         * 创建了一个线程池
+         * 用来跟client端交互的时候，处理client端的请求
+         */
         threadPool = ThreadPoolFactoryUtil.createCustomThreadPoolIfAbsent("socket-server-rpc-pool");
         // 这个zookeeper好粗糙，直接就是指定了这个类，里面 construction 直接给new出来了
         serviceProvider = SingletonFactory.getInstance(ZkServiceProviderImpl.class);
